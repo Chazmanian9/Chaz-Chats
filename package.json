@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "fetch:posts": "node scripts/fetch-content.mjs posts",
-    "fetch:notes": "node scripts/fetch-content.mjs notes"
+    "fetch:notes": "node scripts/fetch-content.mjs notes",
+    "cleanup:discarded": "node scripts/cleanup-discarded.mjs"
   },
   "dependencies": {
     "next": "14.2.5",

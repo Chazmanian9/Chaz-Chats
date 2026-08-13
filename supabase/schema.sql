@@ -13,7 +13,8 @@ create table if not exists posts (
   source_url text,
   source_label text,
   featured boolean not null default false,
-  status text not null default 'published' check (status in ('draft', 'published')),
+  status text not null default 'published' check (status in ('draft', 'published', 'discarded')),
+  discarded_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -26,7 +27,8 @@ create table if not exists notes (
   tag text not null,
   source_label text,
   source_href text,
-  status text not null default 'published' check (status in ('draft', 'published')),
+  status text not null default 'published' check (status in ('draft', 'published', 'discarded')),
+  discarded_at timestamptz,
   created_at timestamptz not null default now()
 );
 

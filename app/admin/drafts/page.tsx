@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -8,38 +7,45 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-async function publishPost(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  if (!supabaseAdmin) return;
-  await supabaseAdmin.from("posts").update({ status: "published" }).eq("id", id);
-  revalidatePath("/admin/drafts");
-  revalidatePath("/");
+const PUBLISHED_LIMIT = 20;
+const DISCARDED_LIMIT = 30;
+
+function StatusButton({
+  table,
+  id,
+  status,
+  label,
+  tone = "default",
+}: {
+  table: "posts" | "notes";
+  id: string;
+  status: "published" | "draft" | "discarded";
+  label: string;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <form method="post" action="/admin/update-status">
+      <input type="hidden" name="table" value={table} />
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="status" value={status} />
+      <button
+        type="submit"
+        className={
+          tone === "danger"
+            ? "rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600"
+            : "rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600"
+        }
+      >
+        {label}
+      </button>
+    </form>
+  );
 }
 
-async function discardPost(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  if (!supabaseAdmin) return;
-  await supabaseAdmin.from("posts").delete().eq("id", id);
-  revalidatePath("/admin/drafts");
-}
-
-async function publishNote(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  if (!supabaseAdmin) return;
-  await supabaseAdmin.from("notes").update({ status: "published" }).eq("id", id);
-  revalidatePath("/admin/drafts");
-  revalidatePath("/");
-}
-
-async function discardNote(formData: FormData) {
-  "use server";
-  const id = formData.get("id") as string;
-  if (!supabaseAdmin) return;
-  await supabaseAdmin.from("notes").delete().eq("id", id);
-  revalidatePath("/admin/drafts");
+function daysLeft(discardedAt: string) {
+  const purgeAt = new Date(discardedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
+  const days = Math.ceil((purgeAt - Date.now()) / (24 * 60 * 60 * 1000));
+  return Math.max(days, 0);
 }
 
 export default async function DraftsPage() {
@@ -54,133 +60,200 @@ export default async function DraftsPage() {
     );
   }
 
-  const [{ data: draftPosts, error: postsError }, { data: draftNotes, error: notesError }] =
-    await Promise.all([
-      supabaseAdmin
-        .from("posts")
-        .select("id, title, excerpt, category, source_label, source_url, created_at")
-        .eq("status", "draft")
-        .order("created_at", { ascending: false }),
-      supabaseAdmin
-        .from("notes")
-        .select("id, text, tag, source_label, source_href, created_at")
-        .eq("status", "draft")
-        .order("created_at", { ascending: false }),
-    ]);
+  const postCols = "id, title, excerpt, category, source_label, source_url, created_at, discarded_at";
+  const noteCols = "id, text, tag, source_label, source_href, created_at, discarded_at";
 
-  const posts = draftPosts ?? [];
-  const notes = draftNotes ?? [];
+  const [
+    { data: draftPosts, error: draftPostsError },
+    { data: draftNotes, error: draftNotesError },
+    { data: publishedPosts },
+    { data: publishedNotes },
+    { data: discardedPosts },
+    { data: discardedNotes },
+  ] = await Promise.all([
+    supabaseAdmin.from("posts").select(postCols).eq("status", "draft").order("created_at", { ascending: false }),
+    supabaseAdmin.from("notes").select(noteCols).eq("status", "draft").order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("posts")
+      .select(postCols)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(PUBLISHED_LIMIT),
+    supabaseAdmin
+      .from("notes")
+      .select(noteCols)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(PUBLISHED_LIMIT),
+    supabaseAdmin
+      .from("posts")
+      .select(postCols)
+      .eq("status", "discarded")
+      .order("discarded_at", { ascending: false })
+      .limit(DISCARDED_LIMIT),
+    supabaseAdmin
+      .from("notes")
+      .select(noteCols)
+      .eq("status", "discarded")
+      .order("discarded_at", { ascending: false })
+      .limit(DISCARDED_LIMIT),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="font-display text-xl font-semibold">Draft Posts ({posts.length})</h1>
-      {postsError && (
-        <p className="mt-4 text-sm text-red-600">Failed to load draft posts: {postsError.message}</p>
-      )}
-      {posts.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No draft posts waiting for review.</p>
-      ) : (
-        <ul className="mt-6 space-y-4">
-          {posts.map((post) => (
-            <li key={post.id} className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
-                  {post.category}
-                </span>
-                {post.source_label && (
-                  <span className="text-xs text-muted-foreground">{post.source_label}</span>
+      <section>
+        <h1 className="font-display text-xl font-semibold">
+          Draft Posts ({draftPosts?.length ?? 0})
+        </h1>
+        {draftPostsError && (
+          <p className="mt-4 text-sm text-red-600">Failed to load: {draftPostsError.message}</p>
+        )}
+        {!draftPosts?.length ? (
+          <p className="mt-4 text-sm text-muted-foreground">No draft posts waiting for review.</p>
+        ) : (
+          <ul className="mt-6 space-y-4">
+            {draftPosts.map((post) => (
+              <li key={post.id} className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
+                    {post.category}
+                  </span>
+                  {post.source_label && (
+                    <span className="text-xs text-muted-foreground">{post.source_label}</span>
+                  )}
+                </div>
+                <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
+                {post.source_url && (
+                  <a
+                    href={post.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs text-primary hover:underline"
+                  >
+                    View source
+                  </a>
                 )}
-              </div>
-              <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
-              {post.source_url && (
-                <a
-                  href={post.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-xs text-primary hover:underline"
-                >
-                  View source
-                </a>
-              )}
-              <div className="mt-4 flex gap-2">
-                <form action={publishPost}>
-                  <input type="hidden" name="id" value={post.id} />
-                  <button
-                    type="submit"
-                    className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600"
-                  >
-                    Publish
-                  </button>
-                </form>
-                <form action={discardPost}>
-                  <input type="hidden" name="id" value={post.id} />
-                  <button
-                    type="submit"
-                    className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600"
-                  >
-                    Discard
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                <div className="mt-4 flex gap-2">
+                  <StatusButton table="posts" id={post.id} status="published" label="Publish" />
+                  <StatusButton table="posts" id={post.id} status="discarded" label="Discard" tone="danger" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <h1 className="mt-14 font-display text-xl font-semibold">Draft Notes ({notes.length})</h1>
-      {notesError && (
-        <p className="mt-4 text-sm text-red-600">Failed to load draft notes: {notesError.message}</p>
-      )}
-      {notes.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No draft notes waiting for review.</p>
-      ) : (
-        <ul className="mt-6 space-y-4">
-          {notes.map((note) => (
-            <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
-                  {note.tag}
-                </span>
-                {note.source_label && (
-                  <span className="text-xs text-muted-foreground">{note.source_label}</span>
+      <section className="mt-14">
+        <h1 className="font-display text-xl font-semibold">
+          Draft Notes ({draftNotes?.length ?? 0})
+        </h1>
+        {draftNotesError && (
+          <p className="mt-4 text-sm text-red-600">Failed to load: {draftNotesError.message}</p>
+        )}
+        {!draftNotes?.length ? (
+          <p className="mt-4 text-sm text-muted-foreground">No draft notes waiting for review.</p>
+        ) : (
+          <ul className="mt-6 space-y-4">
+            {draftNotes.map((note) => (
+              <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
+                    {note.tag}
+                  </span>
+                  {note.source_label && (
+                    <span className="text-xs text-muted-foreground">{note.source_label}</span>
+                  )}
+                </div>
+                <p className="mt-3 text-sm">{note.text}</p>
+                {note.source_href && (
+                  <a
+                    href={note.source_href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs text-primary hover:underline"
+                  >
+                    View source
+                  </a>
                 )}
-              </div>
-              <p className="mt-3 text-sm">{note.text}</p>
-              {note.source_href && (
-                <a
-                  href={note.source_href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-xs text-primary hover:underline"
-                >
-                  View source
-                </a>
-              )}
-              <div className="mt-4 flex gap-2">
-                <form action={publishNote}>
-                  <input type="hidden" name="id" value={note.id} />
-                  <button
-                    type="submit"
-                    className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600"
-                  >
-                    Publish
-                  </button>
-                </form>
-                <form action={discardNote}>
-                  <input type="hidden" name="id" value={note.id} />
-                  <button
-                    type="submit"
-                    className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600"
-                  >
-                    Discard
-                  </button>
-                </form>
-              </div>
+                <div className="mt-4 flex gap-2">
+                  <StatusButton table="notes" id={note.id} status="published" label="Publish" />
+                  <StatusButton table="notes" id={note.id} status="discarded" label="Discard" tone="danger" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-14">
+        <h1 className="font-display text-xl font-semibold">
+          Recently Published (posts: {publishedPosts?.length ?? 0}, notes: {publishedNotes?.length ?? 0})
+        </h1>
+        <p className="mt-1 text-xs text-muted-foreground">Showing the {PUBLISHED_LIMIT} most recent of each — read-only.</p>
+        <ul className="mt-6 space-y-2">
+          {(publishedPosts ?? []).map((post) => (
+            <li key={post.id} className="rounded-xl border border-border/70 bg-card px-4 py-2.5 text-sm">
+              <span className="text-muted-foreground">[Post]</span> {post.title}
             </li>
           ))}
+          {(publishedNotes ?? []).map((note) => (
+            <li key={note.id} className="rounded-xl border border-border/70 bg-card px-4 py-2.5 text-sm">
+              <span className="text-muted-foreground">[Note]</span> {note.text}
+            </li>
+          ))}
+          {!publishedPosts?.length && !publishedNotes?.length && (
+            <p className="text-sm text-muted-foreground">Nothing published yet.</p>
+          )}
         </ul>
-      )}
+      </section>
+
+      <section className="mt-14">
+        <h1 className="font-display text-xl font-semibold">
+          Discarded (posts: {discardedPosts?.length ?? 0}, notes: {discardedNotes?.length ?? 0})
+        </h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Permanently deleted 30 days after discarding — restore before then if you change your mind.
+        </p>
+        {!discardedPosts?.length && !discardedNotes?.length ? (
+          <p className="mt-4 text-sm text-muted-foreground">Nothing in the trash.</p>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {(discardedPosts ?? []).map((post) => (
+              <li
+                key={post.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 text-sm"
+              >
+                <div>
+                  <span className="text-muted-foreground">[Post]</span> {post.title}
+                  {post.discarded_at && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      purges in {daysLeft(post.discarded_at)}d
+                    </span>
+                  )}
+                </div>
+                <StatusButton table="posts" id={post.id} status="draft" label="Restore" />
+              </li>
+            ))}
+            {(discardedNotes ?? []).map((note) => (
+              <li
+                key={note.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 text-sm"
+              >
+                <div>
+                  <span className="text-muted-foreground">[Note]</span> {note.text}
+                  {note.discarded_at && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      purges in {daysLeft(note.discarded_at)}d
+                    </span>
+                  )}
+                </div>
+                <StatusButton table="notes" id={note.id} status="draft" label="Restore" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
