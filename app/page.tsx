@@ -2,11 +2,12 @@ import { SiteHeader } from "@/components/site-header";
 import { HeroSection } from "@/components/hero-section";
 import { NotesFeed } from "@/components/notes-feed";
 import { PromptsSection } from "@/components/prompts-section";
+import { ToolsSection } from "@/components/tools-section";
 import { ArchiveSection } from "@/components/archive-section";
 import { AboutSection } from "@/components/about-section";
 import { Newsletter } from "@/components/newsletter";
 import { SiteFooter } from "@/components/site-footer";
-import { getPosts, getNotes } from "@/lib/data";
+import { getPosts, getNotes, getTools } from "@/lib/data";
 
 // How often Next.js is allowed to re-fetch fresh data from Supabase and
 // regenerate this page. 86400 = once a day. Lower it (e.g. 21600 = every
@@ -16,7 +17,7 @@ import { getPosts, getNotes } from "@/lib/data";
 export const revalidate = 86400;
 
 export default async function Home() {
-  const [posts, notes] = await Promise.all([getPosts(), getNotes()]);
+  const [posts, notes, tools] = await Promise.all([getPosts(), getNotes(), getTools()]);
 
   return (
     <>
@@ -25,6 +26,7 @@ export default async function Home() {
         <HeroSection />
         <NotesFeed notes={notes} />
         <PromptsSection />
+        <ToolsSection tools={tools} />
         <ArchiveSection posts={posts} />
         <AboutSection />
         <Newsletter />

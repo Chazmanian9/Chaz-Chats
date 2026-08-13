@@ -37,14 +37,29 @@ create table if not exists subscribers (
   created_at timestamptz not null default now()
 );
 
+-- ============ TOOLS (AI tools directory) ============
+create table if not exists tools (
+  id uuid primary key default gen_random_uuid(),
+  name text unique not null,
+  description text not null,
+  url text not null,
+  category text not null check (category in ('Chat', 'Coding', 'Image & Video', 'Research')),
+  pricing_tier text not null check (pricing_tier in ('Free', 'Freemium', 'Paid')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists tools_category_idx on tools (category);
+
 -- ============ Row Level Security ============
--- Posts and notes are public read-only content: anyone can read, nobody can write from the browser.
+-- Posts, notes, and tools are public read-only content: anyone can read, nobody can write from the browser.
 alter table posts enable row level security;
 alter table notes enable row level security;
+alter table tools enable row level security;
 alter table subscribers enable row level security;
 
 create policy "Public can read posts" on posts for select using (true);
 create policy "Public can read notes" on notes for select using (true);
+create policy "Public can read tools" on tools for select using (true);
 
 -- Subscribers: no public read (protects your email list), inserts happen only through
 -- the server-side API route using the service role key, which bypasses RLS entirely.
@@ -63,6 +78,15 @@ insert into posts (slug, title, excerpt, category, read_time, published_at, sour
   ('evals-nobody-talks-about', 'The Evals Nobody Talks About (But Should)', 'Benchmark season is noisy. These are the quieter tests that predict real-world reliability.', 'Deep Dive', '10 min read', '2026-07-15', null, null, false),
   ('hype-cycle-check-in', 'A Mid-Year Hype Cycle Check-In', 'Which predictions from January actually held up, and which quietly didn''t.', 'Opinion', '6 min read', '2026-07-03', null, null, false)
 on conflict (slug) do nothing;
+
+insert into tools (name, description, url, category, pricing_tier) values
+  ('ChatGPT', 'OpenAI''s general-purpose AI assistant for writing, research, coding, and everyday questions.', 'https://chatgpt.com', 'Chat', 'Freemium'),
+  ('Claude', 'Anthropic''s AI assistant, built for careful reasoning, long documents, and coding help.', 'https://claude.ai', 'Chat', 'Freemium'),
+  ('GitHub Copilot', 'AI pair programmer that autocompletes code and chats inline across major IDEs.', 'https://github.com/features/copilot', 'Coding', 'Paid'),
+  ('Cursor', 'A VS Code fork rebuilt around AI — natural-language edits, codebase-aware chat, and agent mode.', 'https://cursor.com', 'Coding', 'Freemium'),
+  ('Midjourney', 'Generates high-quality images and video from text prompts, with an active community showcase.', 'https://www.midjourney.com', 'Image & Video', 'Paid'),
+  ('Perplexity', 'An AI answer engine that searches the live web and cites its sources for every response.', 'https://www.perplexity.ai', 'Research', 'Freemium')
+on conflict (name) do nothing;
 
 insert into notes (text, tag, source_label, source_href, created_at) values
   ('The quiet trend this week: three separate labs shipped smaller, cheaper models instead of bigger ones. Efficiency is becoming the flex.', 'Trend', null, null, now() - interval '2 hours'),

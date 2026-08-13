@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { posts as localPosts, type Post } from "@/data/posts";
 import { notes as localNotes, type Note } from "@/data/notes";
+import { tools as localTools, type Tool } from "@/data/tools";
 
 /**
  * Fetches posts for the Archive section.
@@ -58,6 +59,28 @@ export async function getNotes(): Promise<Note[]> {
     timestamp: relativeTime(row.created_at),
     sourceLabel: row.source_label ?? undefined,
     sourceHref: row.source_href ?? undefined,
+  }));
+}
+
+/**
+ * Fetches the AI Tools directory. Same fallback behavior as getPosts.
+ */
+export async function getTools(): Promise<Tool[]> {
+  if (!isSupabaseConfigured || !supabase) return localTools;
+
+  const { data, error } = await supabase.from("tools").select("*").order("name");
+
+  if (error || !data) {
+    console.error("Failed to fetch tools from Supabase, using local fallback:", error);
+    return localTools;
+  }
+
+  return data.map((row) => ({
+    name: row.name,
+    description: row.description,
+    url: row.url,
+    category: row.category,
+    pricingTier: row.pricing_tier,
   }));
 }
 
