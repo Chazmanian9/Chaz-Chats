@@ -15,6 +15,7 @@ export async function getPosts(): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
+    .eq("status", "published")
     .order("published_at", { ascending: false });
 
   if (error || !data) {
@@ -44,6 +45,7 @@ export async function getNotes(): Promise<Note[]> {
   const { data, error } = await supabase
     .from("notes")
     .select("*")
+    .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(20);
 

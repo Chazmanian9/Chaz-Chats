@@ -13,6 +13,7 @@ create table if not exists posts (
   source_url text,
   source_label text,
   featured boolean not null default false,
+  status text not null default 'published' check (status in ('draft', 'published')),
   created_at timestamptz not null default now()
 );
 
@@ -25,6 +26,7 @@ create table if not exists notes (
   tag text not null,
   source_label text,
   source_href text,
+  status text not null default 'published' check (status in ('draft', 'published')),
   created_at timestamptz not null default now()
 );
 
@@ -57,8 +59,10 @@ alter table notes enable row level security;
 alter table tools enable row level security;
 alter table subscribers enable row level security;
 
-create policy "Public can read posts" on posts for select using (true);
-create policy "Public can read notes" on notes for select using (true);
+-- Only published rows are visible to the public anon key — drafts are only
+-- readable via the service-role key (used by /admin and the fetch scripts).
+create policy "Public can read published posts" on posts for select using (status = 'published');
+create policy "Public can read published notes" on notes for select using (status = 'published');
 create policy "Public can read tools" on tools for select using (true);
 
 -- Subscribers: no public read (protects your email list), inserts happen only through
