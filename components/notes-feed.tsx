@@ -3,7 +3,9 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Note } from "@/data/notes";
 
-const tagVariant = (tag: string) => (tag === "News" || tag === "HCM & ERP" ? "accent" : "default") as const;
+function tagVariant(tag: string): "accent" | "default" {
+  return tag === "News" || tag === "HCM & ERP" ? "accent" : "default";
+}
 
 export function NotesFeed({ notes }: { notes: Note[] }) {
   return (
