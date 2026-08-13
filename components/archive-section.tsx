@@ -17,8 +17,16 @@ import { categories, type Post, type PostCategory } from "@/data/posts";
 
 const filters: Array<PostCategory | "All"> = ["All", ...categories];
 
+// Pin timeZone to UTC — post dates are stored as bare dates (e.g. "2026-08-05"),
+// which parse as UTC midnight. Without this, a browser in almost any other
+// timezone renders a different day than the server did, causing a hydration
+// mismatch (this component runs on both sides since it's a Client Component).
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 
 export function ArchiveSection({ posts }: { posts: Post[] }) {
   const [active, setActive] = React.useState<(typeof filters)[number]>("All");
