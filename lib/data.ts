@@ -39,6 +39,12 @@ export async function getPosts(): Promise<Post[]> {
 /**
  * Fetches Notes for the short-form feed. Same fallback behavior as getPosts.
  */
+// The public Notes feed shows only the most recent NOTES_DISPLAY_LIMIT
+// published notes. Publishing a new one past this cap doesn't delete or
+// unpublish the oldest — it just falls outside this window and stops
+// showing, non-destructively.
+const NOTES_DISPLAY_LIMIT = 15;
+
 export async function getNotes(): Promise<Note[]> {
   if (!isSupabaseConfigured || !supabase) return localNotes;
 
@@ -47,7 +53,7 @@ export async function getNotes(): Promise<Note[]> {
     .select("*")
     .eq("status", "published")
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(NOTES_DISPLAY_LIMIT);
 
   if (error || !data) {
     console.error("Failed to fetch notes from Supabase, using local fallback:", error);
