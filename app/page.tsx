@@ -7,7 +7,7 @@ import { ArchiveSection } from "@/components/archive-section";
 import { AboutSection } from "@/components/about-section";
 import { Newsletter } from "@/components/newsletter";
 import { SiteFooter } from "@/components/site-footer";
-import { getPosts, getNotes, getTools } from "@/lib/data";
+import { getPosts, getNotes, getTools, getSiteContent } from "@/lib/data";
 
 // How often Next.js is allowed to re-fetch fresh data from Supabase and
 // regenerate this page. 86400 = once a day. Lower it (e.g. 21600 = every
@@ -17,19 +17,31 @@ import { getPosts, getNotes, getTools } from "@/lib/data";
 export const revalidate = 86400;
 
 export default async function Home() {
-  const [posts, notes, tools] = await Promise.all([getPosts(), getNotes(), getTools()]);
+  const [posts, notes, tools, content] = await Promise.all([
+    getPosts(),
+    getNotes(),
+    getTools(),
+    getSiteContent(),
+  ]);
 
   return (
     <>
       <SiteHeader />
       <main>
-        <HeroSection />
+        <HeroSection headline={content.hero_headline} subheading={content.hero_subheading} />
         <ArchiveSection posts={posts} />
         <NotesFeed notes={notes} />
         <PromptsSection />
         <ToolsSection tools={tools} />
-        <AboutSection />
-        <Newsletter />
+        <AboutSection
+          bio={content.about_bio}
+          credentials={[
+            content.about_credential_1,
+            content.about_credential_2,
+            content.about_credential_3,
+          ]}
+        />
+        <Newsletter heading={content.newsletter_heading} subtext={content.newsletter_subtext} />
       </main>
       <SiteFooter />
     </>

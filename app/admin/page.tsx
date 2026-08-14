@@ -27,10 +27,12 @@ export default async function AdminPage() {
     { data: posts, error: postsError },
     { data: notes, error: notesError },
     { data: subscribers, error: subscribersError },
+    { data: siteContent, error: siteContentError },
   ] = await Promise.all([
     supabaseAdmin.from("posts").select(postCols).order("created_at", { ascending: false }).limit(300),
     supabaseAdmin.from("notes").select(noteCols).order("created_at", { ascending: false }).limit(300),
     supabaseAdmin.from("subscribers").select("email, created_at").order("created_at", { ascending: false }),
+    supabaseAdmin.from("site_content").select("key, label, value, updated_at").order("key"),
   ]);
 
   return (
@@ -38,7 +40,9 @@ export default async function AdminPage() {
       initialPosts={posts ?? []}
       initialNotes={notes ?? []}
       subscribers={subscribers ?? []}
+      initialSiteContent={siteContent ?? []}
       loadError={postsError?.message ?? notesError?.message ?? subscribersError?.message ?? null}
+      contentLoadError={siteContentError?.message ?? null}
     />
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteContent } from "@/lib/data";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -21,11 +22,13 @@ const mono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-export const metadata: Metadata = {
-  title: "Chaz Chats — AI News & Updates, Explained Simply",
-  description:
-    "Real AI knowledge, the latest news, and genuinely useful tools and prompts — all free, written by Chaz in plain language, no hype.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await getSiteContent();
+  return {
+    title: "Chaz Chats — AI News & Updates, Explained Simply",
+    description: content.meta_description,
+  };
+}
 
 export default function RootLayout({
   children,

@@ -27,14 +27,22 @@ type NoteRow = {
 
 type Subscriber = { email: string; created_at: string };
 
-type Tab = "new" | "published" | "discarded" | "subscribers";
+type SiteContentRow = {
+  key: string;
+  label: string;
+  value: string;
+  updated_at: string;
+};
 
-const TABS: Tab[] = ["new", "published", "discarded", "subscribers"];
+type Tab = "new" | "published" | "discarded" | "subscribers" | "content";
+
+const TABS: Tab[] = ["new", "published", "discarded", "subscribers", "content"];
 const TAB_LABELS: Record<Tab, string> = {
   new: "New",
   published: "Published",
   discarded: "Discarded",
   subscribers: "Subscribers",
+  content: "Site Content",
 };
 
 function formatDate(iso: string) {
@@ -50,17 +58,54 @@ export function AdminTabs({
   initialPosts,
   initialNotes,
   subscribers,
+  initialSiteContent,
   loadError,
+  contentLoadError,
 }: {
   initialPosts: PostRow[];
   initialNotes: NoteRow[];
   subscribers: Subscriber[];
+  initialSiteContent: SiteContentRow[];
   loadError: string | null;
+  contentLoadError: string | null;
 }) {
   const [posts, setPosts] = React.useState(initialPosts);
   const [notes, setNotes] = React.useState(initialNotes);
   const [tab, setTab] = React.useState<Tab>("new");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+
+  const [siteContent, setSiteContent] = React.useState(initialSiteContent);
+  const [contentDrafts, setContentDrafts] = React.useState<Record<string, string>>(() =>
+    Object.fromEntries(initialSiteContent.map((row) => [row.key, row.value]))
+  );
+  const [savedKey, setSavedKey] = React.useState<string | null>(null);
+
+  async function saveContent(key: string) {
+    setPendingId(key);
+    try {
+      const formData = new FormData();
+      formData.set("key", key);
+      formData.set("value", contentDrafts[key] ?? "");
+
+      const res = await fetch("/admin/update-site-content", { method: "POST", body: formData });
+
+      if (!res.ok) {
+        const text = await res.text();
+        alert(`Failed (${res.status}): ${text}`);
+        return;
+      }
+
+      setSiteContent((current) =>
+        current.map((row) => (row.key === key ? { ...row, value: contentDrafts[key] ?? "" } : row))
+      );
+      setSavedKey(key);
+      setTimeout(() => setSavedKey((current) => (current === key ? null : current)), 2000);
+    } catch (err) {
+      alert(`Network error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setPendingId(null);
+    }
+  }
 
   async function updateStatus(
     table: "posts" | "notes",
@@ -131,10 +176,51 @@ export function AdminTabs({
         ))}
       </div>
 
-      {loadError && <p className="mt-4 text-sm text-red-600">Failed to load: {loadError}</p>}
+      {loadError && tab !== "content" && (
+        <p className="mt-4 text-sm text-red-600">Failed to load: {loadError}</p>
+      )}
 
       <div className="mt-8">
-        {tab === "subscribers" ? (
+        {tab === "content" ? (
+          <div className="space-y-6">
+            {contentLoadError && (
+              <p className="text-sm text-red-600">Failed to load: {contentLoadError}</p>
+            )}
+            {siteContent.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No site content rows found — has the site_content table been created and seeded?
+              </p>
+            ) : (
+              siteContent.map((row) => (
+                <div key={row.key} className="rounded-2xl border border-border bg-card p-5">
+                  <label htmlFor={row.key} className="text-sm font-medium">
+                    {row.label}
+                  </label>
+                  <textarea
+                    id={row.key}
+                    value={contentDrafts[row.key] ?? ""}
+                    onChange={(e) =>
+                      setContentDrafts((current) => ({ ...current, [row.key]: e.target.value }))
+                    }
+                    rows={row.key === "about_bio" ? 10 : row.value.length > 80 ? 4 : 2}
+                    className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground"
+                  />
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={pendingId === row.key}
+                      onClick={() => saveContent(row.key)}
+                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    {savedKey === row.key && <span className="text-xs text-green-600">Saved</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : tab === "subscribers" ? (
           subscribers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No subscribers yet.</p>
           ) : (

@@ -2,7 +2,16 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function HeroSection() {
+export function HeroSection({
+  headline,
+  subheading,
+}: {
+  headline: string;
+  subheading: string;
+}) {
+  const [headlineLine1, ...rest] = headline.split("\n");
+  const headlineLine2 = rest.join(" ");
+
   return (
     <section id="top" className="relative overflow-hidden">
       <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_60%,transparent_100%)]" />
@@ -16,17 +25,16 @@ export function HeroSection() {
           </div>
 
           <h1 className="font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            AI news,
-            <br />
-            <span className="text-gradient">without the noise.</span>
+            {headlineLine1}
+            {headlineLine2 && (
+              <>
+                <br />
+                <span className="text-gradient">{headlineLine2}</span>
+              </>
+            )}
           </h1>
 
-          <p className="mt-6 max-w-md text-lg text-muted-foreground">
-            Hi, I&apos;m Chaz. I share real AI knowledge, keep you current on
-            what&apos;s actually happening, and build genuinely useful free
-            tools and prompts — because I love this stuff, and figured you
-            might too.
-          </p>
+          <p className="mt-6 max-w-md text-lg text-muted-foreground">{subheading}</p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button size="lg" asChild>

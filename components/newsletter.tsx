@@ -7,7 +7,13 @@ import { Input } from "@/components/ui/input";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-export function Newsletter() {
+export function Newsletter({
+  heading,
+  subtext,
+}: {
+  heading: string;
+  subtext: string;
+}) {
   const [email, setEmail] = React.useState("");
   const [status, setStatus] = React.useState<Status>("idle");
   const [errorMessage, setErrorMessage] = React.useState("");
@@ -50,12 +56,9 @@ export function Newsletter() {
               <Mail className="h-5 w-5 text-white" />
             </div>
             <h2 className="mt-5 font-display text-2xl font-semibold text-white sm:text-3xl">
-              Get the AI rundown, weekly
+              {heading}
             </h2>
-            <p className="mt-3 text-sm text-white/80">
-              No daily spam, no hype — just the news, research, and tools
-              that actually mattered that week.
-            </p>
+            <p className="mt-3 text-sm text-white/80">{subtext}</p>
 
             {status === "success" ? (
               <div className="mt-8 flex items-center justify-center gap-2 rounded-full bg-white/15 px-5 py-3 text-sm font-medium text-white backdrop-blur">
