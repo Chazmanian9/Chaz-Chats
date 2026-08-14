@@ -244,8 +244,84 @@ export function AdminTabs({
         ) : visiblePosts.length === 0 && visibleNotes.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing here.</p>
         ) : (
-          <ul className="space-y-4">
-            {visiblePosts.map((post) => (
+          <div className="space-y-10">
+          <section>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Notes ({visibleNotes.length})
+            </h2>
+            {visibleNotes.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No notes here.</p>
+            ) : (
+              <ul className="mt-3 space-y-4">
+                {visibleNotes.map((note) => (
+              <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
+                    {note.tag}
+                  </span>
+                  {note.source_label && (
+                    <span className="text-xs text-muted-foreground">{note.source_label}</span>
+                  )}
+                </div>
+                <p className="mt-3 text-sm">{note.text}</p>
+                {note.source_href && (
+                  <a
+                    href={note.source_href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs text-primary hover:underline"
+                  >
+                    View source
+                  </a>
+                )}
+                {tab === "new" && (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={pendingId === note.id}
+                      onClick={() => updateStatus("notes", note.id, "published")}
+                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
+                    >
+                      Publish
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pendingId === note.id}
+                      onClick={() => updateStatus("notes", note.id, "discarded")}
+                      className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600 disabled:opacity-50"
+                    >
+                      Discard
+                    </button>
+                  </div>
+                )}
+                {tab === "discarded" && (
+                  <button
+                    type="button"
+                    disabled={pendingId === note.id}
+                    onClick={() => updateStatus("notes", note.id, "draft")}
+                    className="mt-4 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
+                  >
+                    Restore
+                  </button>
+                )}
+                {tab === "published" && (
+                  <p className="mt-3 text-xs text-muted-foreground">Published {formatDate(note.created_at)}</p>
+                )}
+              </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Posts ({visiblePosts.length})
+            </h2>
+            {visiblePosts.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No posts here.</p>
+            ) : (
+              <ul className="mt-3 space-y-4">
+                {visiblePosts.map((post) => (
               <li key={post.id} className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex items-center justify-between gap-3">
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
@@ -301,65 +377,11 @@ export function AdminTabs({
                   <p className="mt-3 text-xs text-muted-foreground">Published {formatDate(post.created_at)}</p>
                 )}
               </li>
-            ))}
-
-            {visibleNotes.map((note) => (
-              <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
-                    {note.tag}
-                  </span>
-                  {note.source_label && (
-                    <span className="text-xs text-muted-foreground">{note.source_label}</span>
-                  )}
-                </div>
-                <p className="mt-3 text-sm">{note.text}</p>
-                {note.source_href && (
-                  <a
-                    href={note.source_href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    View source
-                  </a>
-                )}
-                {tab === "new" && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      disabled={pendingId === note.id}
-                      onClick={() => updateStatus("notes", note.id, "published")}
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pendingId === note.id}
-                      onClick={() => updateStatus("notes", note.id, "discarded")}
-                      className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600 disabled:opacity-50"
-                    >
-                      Discard
-                    </button>
-                  </div>
-                )}
-                {tab === "discarded" && (
-                  <button
-                    type="button"
-                    disabled={pendingId === note.id}
-                    onClick={() => updateStatus("notes", note.id, "draft")}
-                    className="mt-4 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                  >
-                    Restore
-                  </button>
-                )}
-                {tab === "published" && (
-                  <p className="mt-3 text-xs text-muted-foreground">Published {formatDate(note.created_at)}</p>
-                )}
-              </li>
-            ))}
-          </ul>
+                ))}
+              </ul>
+            )}
+          </section>
+          </div>
         )}
       </div>
     </main>
