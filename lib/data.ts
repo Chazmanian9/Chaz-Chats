@@ -125,7 +125,10 @@ export async function getSiteContent(): Promise<Record<string, string>> {
 
   const merged = { ...siteContentDefaults };
   for (const row of data) {
-    if (row.value) merged[row.key] = row.value;
+    // The SQL Editor (and some paste sources) normalize line breaks to
+    // \r\n; normalize back to \n so hero/about's "\n"-based splitting
+    // works regardless of how the value was entered or stored.
+    if (row.value) merged[row.key] = row.value.replace(/\r\n/g, "\n");
   }
   return merged;
 }
