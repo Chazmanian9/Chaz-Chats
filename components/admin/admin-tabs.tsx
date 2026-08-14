@@ -34,10 +34,20 @@ type SiteContentRow = {
   updated_at: string;
 };
 
-type Tab = "new" | "published" | "discarded" | "subscribers" | "content";
+type Tab = "notes-new" | "notes-published" | "new" | "published" | "discarded" | "subscribers" | "content";
 
-const TABS: Tab[] = ["new", "published", "discarded", "subscribers", "content"];
+const TABS: Tab[] = [
+  "notes-new",
+  "notes-published",
+  "new",
+  "published",
+  "discarded",
+  "subscribers",
+  "content",
+];
 const TAB_LABELS: Record<Tab, string> = {
+  "notes-new": "New Notes",
+  "notes-published": "Notes Published",
   new: "New",
   published: "Published",
   discarded: "Discarded",
@@ -52,6 +62,84 @@ function formatDate(iso: string) {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+function ActionButton({
+  label,
+  tone = "default",
+  disabled,
+  onClick,
+}: {
+  label: string;
+  tone?: "default" | "danger";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={
+        tone === "danger"
+          ? "rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600 disabled:opacity-50"
+          : "rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function PostCard({ post, footer }: { post: PostRow; footer: React.ReactNode }) {
+  return (
+    <li className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
+          {post.category}
+        </span>
+        {post.source_label && <span className="text-xs text-muted-foreground">{post.source_label}</span>}
+      </div>
+      <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
+      {post.source_url && (
+        <a
+          href={post.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-xs text-primary hover:underline"
+        >
+          View source
+        </a>
+      )}
+      {footer}
+    </li>
+  );
+}
+
+function NoteCard({ note, footer }: { note: NoteRow; footer: React.ReactNode }) {
+  return (
+    <li className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
+          {note.tag}
+        </span>
+        {note.source_label && <span className="text-xs text-muted-foreground">{note.source_label}</span>}
+      </div>
+      <p className="mt-3 text-sm">{note.text}</p>
+      {note.source_href && (
+        <a
+          href={note.source_href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-xs text-primary hover:underline"
+        >
+          View source
+        </a>
+      )}
+      {footer}
+    </li>
+  );
 }
 
 export function AdminTabs({
@@ -71,7 +159,7 @@ export function AdminTabs({
 }) {
   const [posts, setPosts] = React.useState(initialPosts);
   const [notes, setNotes] = React.useState(initialNotes);
-  const [tab, setTab] = React.useState<Tab>("new");
+  const [tab, setTab] = React.useState<Tab>("notes-new");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   const [siteContent, setSiteContent] = React.useState(initialSiteContent);
@@ -148,17 +236,19 @@ export function AdminTabs({
     }
   }
 
-  const statusFilter =
-    tab === "new" ? "draft" : tab === "published" ? "published" : tab === "discarded" ? "discarded" : null;
+  const draftNotes = notes.filter((n) => n.status === "draft");
+  const publishedNotes = notes.filter((n) => n.status === "published");
+  const discardedNotes = notes.filter((n) => n.status === "discarded");
 
-  const visiblePosts = statusFilter ? posts.filter((p) => p.status === statusFilter) : [];
-  const visibleNotes = statusFilter ? notes.filter((n) => n.status === statusFilter) : [];
+  const draftPosts = posts.filter((p) => p.status === "draft");
+  const publishedPosts = posts.filter((p) => p.status === "published");
+  const discardedPosts = posts.filter((p) => p.status === "discarded");
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="font-display text-xl font-semibold">Admin</h1>
 
-      <div className="mt-6 flex gap-1 border-b border-border">
+      <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
         {TABS.map((t) => (
           <button
             key={t}
@@ -181,11 +271,9 @@ export function AdminTabs({
       )}
 
       <div className="mt-8">
-        {tab === "content" ? (
+        {tab === "content" && (
           <div className="space-y-6">
-            {contentLoadError && (
-              <p className="text-sm text-red-600">Failed to load: {contentLoadError}</p>
-            )}
+            {contentLoadError && <p className="text-sm text-red-600">Failed to load: {contentLoadError}</p>}
             {siteContent.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No site content rows found — has the site_content table been created and seeded?
@@ -206,21 +294,20 @@ export function AdminTabs({
                     className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground"
                   />
                   <div className="mt-3 flex items-center gap-3">
-                    <button
-                      type="button"
+                    <ActionButton
+                      label="Save"
                       disabled={pendingId === row.key}
                       onClick={() => saveContent(row.key)}
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                    >
-                      Save
-                    </button>
+                    />
                     {savedKey === row.key && <span className="text-xs text-green-600">Saved</span>}
                   </div>
                 </div>
               ))
             )}
           </div>
-        ) : tab === "subscribers" ? (
+        )}
+
+        {tab === "subscribers" && (
           subscribers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No subscribers yet.</p>
           ) : (
@@ -241,147 +328,141 @@ export function AdminTabs({
               </tbody>
             </table>
           )
-        ) : visiblePosts.length === 0 && visibleNotes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing here.</p>
-        ) : (
-          <div className="space-y-10">
-          <section>
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Notes ({visibleNotes.length})
-            </h2>
-            {visibleNotes.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">No notes here.</p>
-            ) : (
-              <ul className="mt-3 space-y-4">
-                {visibleNotes.map((note) => (
-              <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
-                    {note.tag}
-                  </span>
-                  {note.source_label && (
-                    <span className="text-xs text-muted-foreground">{note.source_label}</span>
-                  )}
-                </div>
-                <p className="mt-3 text-sm">{note.text}</p>
-                {note.source_href && (
-                  <a
-                    href={note.source_href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    View source
-                  </a>
-                )}
-                {tab === "new" && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      disabled={pendingId === note.id}
-                      onClick={() => updateStatus("notes", note.id, "published")}
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pendingId === note.id}
-                      onClick={() => updateStatus("notes", note.id, "discarded")}
-                      className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600 disabled:opacity-50"
-                    >
-                      Discard
-                    </button>
-                  </div>
-                )}
-                {tab === "discarded" && (
-                  <button
-                    type="button"
-                    disabled={pendingId === note.id}
-                    onClick={() => updateStatus("notes", note.id, "draft")}
-                    className="mt-4 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                  >
-                    Restore
-                  </button>
-                )}
-                {tab === "published" && (
-                  <p className="mt-3 text-xs text-muted-foreground">Published {formatDate(note.created_at)}</p>
-                )}
-              </li>
-                ))}
-              </ul>
-            )}
-          </section>
+        )}
 
-          <section>
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Posts ({visiblePosts.length})
-            </h2>
-            {visiblePosts.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">No posts here.</p>
-            ) : (
-              <ul className="mt-3 space-y-4">
-                {visiblePosts.map((post) => (
-              <li key={post.id} className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
-                    {post.category}
-                  </span>
-                  {post.source_label && (
-                    <span className="text-xs text-muted-foreground">{post.source_label}</span>
-                  )}
-                </div>
-                <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
-                {post.source_url && (
-                  <a
-                    href={post.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    View source
-                  </a>
-                )}
-                {tab === "new" && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
+        {tab === "notes-new" && (
+          draftNotes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No new notes waiting for review.</p>
+          ) : (
+            <ul className="space-y-4">
+              {draftNotes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  footer={
+                    <div className="mt-4 flex gap-2">
+                      <ActionButton
+                        label="Publish"
+                        disabled={pendingId === note.id}
+                        onClick={() => updateStatus("notes", note.id, "published")}
+                      />
+                      <ActionButton
+                        label="Discard"
+                        tone="danger"
+                        disabled={pendingId === note.id}
+                        onClick={() => updateStatus("notes", note.id, "discarded")}
+                      />
+                    </div>
+                  }
+                />
+              ))}
+            </ul>
+          )
+        )}
+
+        {tab === "notes-published" && (
+          publishedNotes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing published yet.</p>
+          ) : (
+            <ul className="space-y-4">
+              {publishedNotes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  footer={
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Published {formatDate(note.created_at)}
+                    </p>
+                  }
+                />
+              ))}
+            </ul>
+          )
+        )}
+
+        {tab === "new" && (
+          draftPosts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No draft posts waiting for review.</p>
+          ) : (
+            <ul className="space-y-4">
+              {draftPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  footer={
+                    <div className="mt-4 flex gap-2">
+                      <ActionButton
+                        label="Publish"
+                        disabled={pendingId === post.id}
+                        onClick={() => updateStatus("posts", post.id, "published")}
+                      />
+                      <ActionButton
+                        label="Discard"
+                        tone="danger"
+                        disabled={pendingId === post.id}
+                        onClick={() => updateStatus("posts", post.id, "discarded")}
+                      />
+                    </div>
+                  }
+                />
+              ))}
+            </ul>
+          )
+        )}
+
+        {tab === "published" && (
+          publishedPosts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing published yet.</p>
+          ) : (
+            <ul className="space-y-4">
+              {publishedPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  footer={
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Published {formatDate(post.created_at)}
+                    </p>
+                  }
+                />
+              ))}
+            </ul>
+          )
+        )}
+
+        {tab === "discarded" && (
+          discardedPosts.length === 0 && discardedNotes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing in the trash.</p>
+          ) : (
+            <ul className="space-y-4">
+              {discardedNotes.map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  footer={
+                    <ActionButton
+                      label="Restore"
+                      disabled={pendingId === note.id}
+                      onClick={() => updateStatus("notes", note.id, "draft")}
+                    />
+                  }
+                />
+              ))}
+              {discardedPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  footer={
+                    <ActionButton
+                      label="Restore"
                       disabled={pendingId === post.id}
-                      onClick={() => updateStatus("posts", post.id, "published")}
-                      className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pendingId === post.id}
-                      onClick={() => updateStatus("posts", post.id, "discarded")}
-                      className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600 disabled:opacity-50"
-                    >
-                      Discard
-                    </button>
-                  </div>
-                )}
-                {tab === "discarded" && (
-                  <button
-                    type="button"
-                    disabled={pendingId === post.id}
-                    onClick={() => updateStatus("posts", post.id, "draft")}
-                    className="mt-4 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
-                  >
-                    Restore
-                  </button>
-                )}
-                {tab === "published" && (
-                  <p className="mt-3 text-xs text-muted-foreground">Published {formatDate(post.created_at)}</p>
-                )}
-              </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          </div>
+                      onClick={() => updateStatus("posts", post.id, "draft")}
+                    />
+                  }
+                />
+              ))}
+            </ul>
+          )
         )}
       </div>
     </main>
