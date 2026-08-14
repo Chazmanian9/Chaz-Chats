@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase-admin";
 
-// Plain form POST handler (not a Server Action) so this works as a normal
-// browser navigation under the /admin Basic Auth middleware — Server
-// Actions' background fetch didn't reliably carry cached auth headers.
+// Called via fetch() from components/admin/status-button.tsx, under the
+// /admin Basic Auth middleware.
 export async function POST(request: Request) {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return NextResponse.json({ error: "Not configured" }, { status: 503 });
@@ -31,5 +30,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.redirect(new URL("/admin/drafts", request.url), 303);
+  return NextResponse.json({ ok: true });
 }

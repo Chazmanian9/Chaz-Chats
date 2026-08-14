@@ -1,4 +1,5 @@
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase-admin";
+import { StatusButton } from "@/components/admin/status-button";
 
 export const dynamic = "force-dynamic";
 
@@ -9,38 +10,6 @@ export const metadata = {
 
 const PUBLISHED_LIMIT = 20;
 const DISCARDED_LIMIT = 30;
-
-function StatusButton({
-  table,
-  id,
-  status,
-  label,
-  tone = "default",
-}: {
-  table: "posts" | "notes";
-  id: string;
-  status: "published" | "draft" | "discarded";
-  label: string;
-  tone?: "default" | "danger";
-}) {
-  return (
-    <form method="post" action="/admin/update-status">
-      <input type="hidden" name="table" value={table} />
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="status" value={status} />
-      <button
-        type="submit"
-        className={
-          tone === "danger"
-            ? "rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:border-red-400 hover:text-red-600"
-            : "rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-600"
-        }
-      >
-        {label}
-      </button>
-    </form>
-  );
-}
 
 function daysLeft(discardedAt: string) {
   const purgeAt = new Date(discardedAt).getTime() + 30 * 24 * 60 * 60 * 1000;
