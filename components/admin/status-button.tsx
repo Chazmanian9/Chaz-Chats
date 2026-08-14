@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
 export function StatusButton({
   table,
@@ -16,7 +15,6 @@ export function StatusButton({
   label: string;
   tone?: "default" | "danger";
 }) {
-  const router = useRouter();
   const [pending, setPending] = React.useState(false);
 
   async function handleClick() {
@@ -38,7 +36,7 @@ export function StatusButton({
         return;
       }
 
-      router.refresh();
+      window.location.reload();
     } catch (err) {
       alert(`Network error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
