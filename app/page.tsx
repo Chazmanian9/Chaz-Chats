@@ -24,10 +24,10 @@ export default async function Home() {
       <SiteHeader />
       <main>
         <HeroSection />
+        <ArchiveSection posts={posts} />
         <NotesFeed notes={notes} />
         <PromptsSection />
         <ToolsSection tools={tools} />
-        <ArchiveSection posts={posts} />
         <AboutSection />
         <Newsletter />
       </main>
