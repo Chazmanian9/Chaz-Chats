@@ -1,9 +1,9 @@
-import { BadgeCheck, Newspaper, Users } from "lucide-react";
+import { BadgeCheck, Briefcase, Workflow } from "lucide-react";
 
 const credentials = [
-  { icon: Newspaper, label: "150+ write-ups on AI shipped since 2024" },
-  { icon: Users, label: "8.4k readers getting the weekly rundown" },
-  { icon: BadgeCheck, label: "Sources checked before every News post" },
+  { icon: Briefcase, label: "8+ years in enterprise HR technology" },
+  { icon: Workflow, label: "Led Workday HCM & Time and Absence implementations" },
+  { icon: BadgeCheck, label: "Sources reviewed before every post" },
 ];
 
 export function AboutSection() {
@@ -23,15 +23,33 @@ export function AboutSection() {
               Hi, I&apos;m Chaz.
             </h2>
             <p className="mt-4 text-muted-foreground">
-              I read the papers, test the products, and sit through the
-              livestreams so you don&apos;t have to. Chaz Chats exists to cut
-              through AI hype and tell you plainly what changed, what it
-              means, and whether it&apos;s actually worth your attention.
+              Hey, I&apos;m Chaz! By day, I&apos;m a Senior Technology Analyst
+              living and breathing enterprise HR technology — nearly a decade
+              deep in Workday, and honestly, I love every minute of it.
+              I&apos;ve led two full Workday implementations from scratch (a
+              company-wide HCM rollout and a multi-country Time &amp; Absence
+              deployment across the US, Canada, and Mexico), served as a
+              compensation lead and security audit lead, and I&apos;m usually
+              the person my teams turn to when it&apos;s time to figure out
+              how AI actually fits into HR. I&apos;ve led AI adoption efforts
+              for HR teams at multiple organizations, and I genuinely love
+              that part of the job — there&apos;s nothing better than
+              watching someone go from skeptical to sold once they see what
+              AI can actually do for their day-to-day.
             </p>
             <p className="mt-4 text-muted-foreground">
-              No live chat, no comment wars — just short daily Notes for the
-              fast-moving stuff and longer Archive pieces when something
-              deserves a real look.
+              Before all this, I served in the U.S. Army as a Human Resources
+              Specialist, which is where &apos;get it right, not just get it
+              fast&apos; became second nature. I&apos;ve also spent a lot of
+              my career training and mentoring people — SMEs, HR partners,
+              new hires, you name it — because I genuinely like helping
+              people understand systems that feel intimidating at first.
+            </p>
+            <p className="mt-4 text-muted-foreground">
+              That&apos;s basically what Chaz Chats is: me doing the same
+              thing, just for AI. Real information, checked before it goes
+              out, explained the way I&apos;d explain it to a coworker over
+              coffee — no hype, just useful.
             </p>
 
             <ul className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">

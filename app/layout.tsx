@@ -24,7 +24,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Chaz Chats — AI News & Updates, Explained Simply",
   description:
-    "Daily Notes and in-depth Archive pieces on what's actually happening in AI — written in plain language by Chaz.",
+    "Real AI knowledge, the latest news, and genuinely useful tools and prompts — all free, written by Chaz in plain language, no hype.",
 };
 
 export default function RootLayout({

@@ -22,9 +22,10 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-6 max-w-md text-lg text-muted-foreground">
-            I&apos;m Chaz. I track what&apos;s actually shipping in AI —
-            models, tools, research, policy — and write it up straight, no
-            hype, no fluff.
+            Hi, I&apos;m Chaz. I share real AI knowledge, keep you current on
+            what&apos;s actually happening, and build genuinely useful free
+            tools and prompts — because I love this stuff, and figured you
+            might too.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -37,18 +38,6 @@ export function HeroSection() {
             <Button size="lg" variant="outline" asChild>
               <Link href="#archive">Browse the Archive</Link>
             </Button>
-          </div>
-
-          <div className="mt-10 flex items-center gap-6 text-sm text-muted-foreground">
-            <div>
-              <p className="font-display text-2xl font-semibold text-foreground">150+</p>
-              <p>write-ups published</p>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div>
-              <p className="font-display text-2xl font-semibold text-foreground">8.4k</p>
-              <p>weekly readers</p>
-            </div>
           </div>
         </div>
 
