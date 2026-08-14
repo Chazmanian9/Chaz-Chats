@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase-admin";
 
-// Called via fetch() from components/admin/status-button.tsx, under the
+// Called via fetch() from components/admin/admin-tabs.tsx, under the
 // /admin Basic Auth middleware.
 export async function POST(request: Request) {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (
     (table !== "posts" && table !== "notes") ||
     typeof id !== "string" ||
-    (status !== "published" && status !== "draft" && status !== "approved" && status !== "discarded")
+    (status !== "published" && status !== "draft" && status !== "discarded")
   ) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
