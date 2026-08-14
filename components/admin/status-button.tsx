@@ -11,7 +11,7 @@ export function StatusButton({
 }: {
   table: "posts" | "notes";
   id: string;
-  status: "published" | "draft" | "discarded";
+  status: "published" | "draft" | "approved" | "discarded";
   label: string;
   tone?: "default" | "danger";
 }) {

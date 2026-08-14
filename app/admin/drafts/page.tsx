@@ -17,6 +17,92 @@ function daysLeft(discardedAt: string) {
   return Math.max(days, 0);
 }
 
+type PostRow = {
+  id: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  source_label: string | null;
+  source_url: string | null;
+  discarded_at: string | null;
+};
+
+type NoteRow = {
+  id: string;
+  text: string;
+  tag: string;
+  source_label: string | null;
+  source_href: string | null;
+  discarded_at: string | null;
+};
+
+function PostCard({
+  post,
+  actions,
+}: {
+  post: PostRow;
+  actions: React.ReactNode;
+}) {
+  return (
+    <li className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
+          {post.category}
+        </span>
+        {post.source_label && (
+          <span className="text-xs text-muted-foreground">{post.source_label}</span>
+        )}
+      </div>
+      <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
+      {post.source_url && (
+        <a
+          href={post.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-xs text-primary hover:underline"
+        >
+          View source
+        </a>
+      )}
+      <div className="mt-4 flex gap-2">{actions}</div>
+    </li>
+  );
+}
+
+function NoteCard({
+  note,
+  actions,
+}: {
+  note: NoteRow;
+  actions: React.ReactNode;
+}) {
+  return (
+    <li className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
+          {note.tag}
+        </span>
+        {note.source_label && (
+          <span className="text-xs text-muted-foreground">{note.source_label}</span>
+        )}
+      </div>
+      <p className="mt-3 text-sm">{note.text}</p>
+      {note.source_href && (
+        <a
+          href={note.source_href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-xs text-primary hover:underline"
+        >
+          View source
+        </a>
+      )}
+      <div className="mt-4 flex gap-2">{actions}</div>
+    </li>
+  );
+}
+
 export default async function DraftsPage() {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return (
@@ -35,6 +121,8 @@ export default async function DraftsPage() {
   const [
     { data: draftPosts, error: draftPostsError },
     { data: draftNotes, error: draftNotesError },
+    { data: approvedPosts, error: approvedPostsError },
+    { data: approvedNotes, error: approvedNotesError },
     { data: publishedPosts },
     { data: publishedNotes },
     { data: discardedPosts },
@@ -42,6 +130,8 @@ export default async function DraftsPage() {
   ] = await Promise.all([
     supabaseAdmin.from("posts").select(postCols).eq("status", "draft").order("created_at", { ascending: false }),
     supabaseAdmin.from("notes").select(noteCols).eq("status", "draft").order("created_at", { ascending: false }),
+    supabaseAdmin.from("posts").select(postCols).eq("status", "approved").order("created_at", { ascending: false }),
+    supabaseAdmin.from("notes").select(noteCols).eq("status", "approved").order("created_at", { ascending: false }),
     supabaseAdmin
       .from("posts")
       .select(postCols)
@@ -74,6 +164,7 @@ export default async function DraftsPage() {
         <h1 className="font-display text-xl font-semibold">
           Draft Posts ({draftPosts?.length ?? 0})
         </h1>
+        <p className="mt-1 text-xs text-muted-foreground">Freshly pulled — approve to move to Ready to Publish.</p>
         {draftPostsError && (
           <p className="mt-4 text-sm text-red-600">Failed to load: {draftPostsError.message}</p>
         )}
@@ -82,32 +173,16 @@ export default async function DraftsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {draftPosts.map((post) => (
-              <li key={post.id} className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs text-primary-700 dark:text-primary-300">
-                    {post.category}
-                  </span>
-                  {post.source_label && (
-                    <span className="text-xs text-muted-foreground">{post.source_label}</span>
-                  )}
-                </div>
-                <h2 className="mt-3 font-display text-base font-semibold">{post.title}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p>
-                {post.source_url && (
-                  <a
-                    href={post.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    View source
-                  </a>
-                )}
-                <div className="mt-4 flex gap-2">
-                  <StatusButton table="posts" id={post.id} status="published" label="Publish" />
-                  <StatusButton table="posts" id={post.id} status="discarded" label="Discard" tone="danger" />
-                </div>
-              </li>
+              <PostCard
+                key={post.id}
+                post={post}
+                actions={
+                  <>
+                    <StatusButton table="posts" id={post.id} status="approved" label="Approve" />
+                    <StatusButton table="posts" id={post.id} status="discarded" label="Discard" tone="danger" />
+                  </>
+                }
+              />
             ))}
           </ul>
         )}
@@ -117,6 +192,7 @@ export default async function DraftsPage() {
         <h1 className="font-display text-xl font-semibold">
           Draft Notes ({draftNotes?.length ?? 0})
         </h1>
+        <p className="mt-1 text-xs text-muted-foreground">Freshly pulled — approve to move to Ready to Publish.</p>
         {draftNotesError && (
           <p className="mt-4 text-sm text-red-600">Failed to load: {draftNotesError.message}</p>
         )}
@@ -125,31 +201,60 @@ export default async function DraftsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {draftNotes.map((note) => (
-              <li key={note.id} className="rounded-2xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-accent/10 px-2.5 py-0.5 font-mono text-xs text-accent-700 dark:text-accent-300">
-                    {note.tag}
-                  </span>
-                  {note.source_label && (
-                    <span className="text-xs text-muted-foreground">{note.source_label}</span>
-                  )}
-                </div>
-                <p className="mt-3 text-sm">{note.text}</p>
-                {note.source_href && (
-                  <a
-                    href={note.source_href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    View source
-                  </a>
-                )}
-                <div className="mt-4 flex gap-2">
-                  <StatusButton table="notes" id={note.id} status="published" label="Publish" />
-                  <StatusButton table="notes" id={note.id} status="discarded" label="Discard" tone="danger" />
-                </div>
-              </li>
+              <NoteCard
+                key={note.id}
+                note={note}
+                actions={
+                  <>
+                    <StatusButton table="notes" id={note.id} status="approved" label="Approve" />
+                    <StatusButton table="notes" id={note.id} status="discarded" label="Discard" tone="danger" />
+                  </>
+                }
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-14">
+        <h1 className="font-display text-xl font-semibold">
+          Ready to Publish (posts: {approvedPosts?.length ?? 0}, notes: {approvedNotes?.length ?? 0})
+        </h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Publish now, or leave it — the daily automated refresh publishes anything left here too.
+        </p>
+        {(approvedPostsError || approvedNotesError) && (
+          <p className="mt-4 text-sm text-red-600">
+            Failed to load: {approvedPostsError?.message ?? approvedNotesError?.message}
+          </p>
+        )}
+        {!approvedPosts?.length && !approvedNotes?.length ? (
+          <p className="mt-4 text-sm text-muted-foreground">Nothing approved yet.</p>
+        ) : (
+          <ul className="mt-6 space-y-4">
+            {(approvedPosts ?? []).map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                actions={
+                  <>
+                    <StatusButton table="posts" id={post.id} status="published" label="Publish" />
+                    <StatusButton table="posts" id={post.id} status="discarded" label="Discard" tone="danger" />
+                  </>
+                }
+              />
+            ))}
+            {(approvedNotes ?? []).map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                actions={
+                  <>
+                    <StatusButton table="notes" id={note.id} status="published" label="Publish" />
+                    <StatusButton table="notes" id={note.id} status="discarded" label="Discard" tone="danger" />
+                  </>
+                }
+              />
             ))}
           </ul>
         )}

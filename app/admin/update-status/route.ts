@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (
     (table !== "posts" && table !== "notes") ||
     typeof id !== "string" ||
-    (status !== "published" && status !== "draft" && status !== "discarded")
+    (status !== "published" && status !== "draft" && status !== "approved" && status !== "discarded")
   ) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
