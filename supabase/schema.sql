@@ -54,18 +54,28 @@ create table if not exists tools (
 
 create index if not exists tools_category_idx on tools (category);
 
+-- ============ SITE_CONTENT (editable homepage/meta text) ============
+create table if not exists site_content (
+  key text primary key,
+  label text not null,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
 -- ============ Row Level Security ============
 -- Posts, notes, and tools are public read-only content: anyone can read, nobody can write from the browser.
 alter table posts enable row level security;
 alter table notes enable row level security;
 alter table tools enable row level security;
 alter table subscribers enable row level security;
+alter table site_content enable row level security;
 
 -- Only published rows are visible to the public anon key — drafts are only
 -- readable via the service-role key (used by /admin and the fetch scripts).
 create policy "Public can read published posts" on posts for select using (status = 'published');
 create policy "Public can read published notes" on notes for select using (status = 'published');
 create policy "Public can read tools" on tools for select using (true);
+create policy "Public can read site content" on site_content for select using (true);
 
 -- Subscribers: no public read (protects your email list), inserts happen only through
 -- the server-side API route using the service role key, which bypasses RLS entirely.
@@ -93,6 +103,23 @@ insert into tools (name, description, url, category, pricing_tier) values
   ('Midjourney', 'Generates high-quality images and video from text prompts, with an active community showcase.', 'https://www.midjourney.com', 'Image & Video', 'Paid'),
   ('Perplexity', 'An AI answer engine that searches the live web and cites its sources for every response.', 'https://www.perplexity.ai', 'Research', 'Freemium')
 on conflict (name) do nothing;
+
+insert into site_content (key, label, value) values
+  ('hero_headline', 'Hero Headline', $$AI news,
+without the noise.$$),
+  ('hero_subheading', 'Hero Subheading', $$Hi, I'm Chaz. I share real AI knowledge, keep you current on what's actually happening, and build genuinely useful free tools and prompts — because I love this stuff, and figured you might too.$$),
+  ('about_bio', 'About Bio', $$Hey, I'm Chaz! By day, I'm a Senior Technology Analyst living and breathing enterprise HR technology — nearly a decade deep in Workday, and honestly, I love every minute of it. I've led two full Workday implementations from scratch (a company-wide HCM rollout and a multi-country Time & Absence deployment across the US, Canada, and Mexico), served as a compensation lead and security audit lead, and I'm usually the person my teams turn to when it's time to figure out how AI actually fits into HR. I've led AI adoption efforts for HR teams at multiple organizations, and I genuinely love that part of the job — there's nothing better than watching someone go from skeptical to sold once they see what AI can actually do for their day-to-day.
+
+Before all this, I served in the U.S. Army as a Human Resources Specialist, which is where 'get it right, not just get it fast' became second nature. I've also spent a lot of my career training and mentoring people — SMEs, HR partners, new hires, you name it — because I genuinely like helping people understand systems that feel intimidating at first.
+
+That's basically what Chaz Chats is: me doing the same thing, just for AI. Real information, checked before it goes out, explained the way I'd explain it to a coworker over coffee — no hype, just useful.$$),
+  ('about_credential_1', 'About Credential 1', $$8+ years in enterprise HR technology$$),
+  ('about_credential_2', 'About Credential 2', $$Led Workday HCM & Time and Absence implementations$$),
+  ('about_credential_3', 'About Credential 3', $$Sources reviewed before every post$$),
+  ('meta_description', 'Site Meta Description', $$Real AI knowledge, the latest news, and genuinely useful tools and prompts — all free, written by Chaz in plain language, no hype.$$),
+  ('newsletter_heading', 'Newsletter Heading', $$Get the AI rundown, weekly$$),
+  ('newsletter_subtext', 'Newsletter Subtext', $$No daily spam, no hype — just the news, research, and tools that actually mattered that week.$$)
+on conflict (key) do nothing;
 
 insert into notes (text, tag, source_label, source_href, created_at) values
   ('The quiet trend this week: three separate labs shipped smaller, cheaper models instead of bigger ones. Efficiency is becoming the flex.', 'Trend', null, null, now() - interval '2 hours'),
